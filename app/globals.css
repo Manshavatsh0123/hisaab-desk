@@ -1,0 +1,184 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --background: #f7faf7;
+  --foreground: #173b30;
+  --card: #ffffff;
+  --card-foreground: #173b30;
+  --popover: #ffffff;
+  --popover-foreground: #1a1a1a;
+  --primary: #173b30;
+  --primary-foreground: #ffffff;
+  --secondary: #e8f2ed;
+  --secondary-foreground: #173b30;
+  --muted: #eef5f0;
+  --muted-foreground: #6b8176;
+  --accent: #c4f36b;
+  --accent-foreground: #173b30;
+  --destructive: #b45f3d;
+  --destructive-foreground: #ffffff;
+  --border: #d8e2db;
+  --input: #d8e2db;
+  --ring: #c4f36b;
+  --chart-1: #173b30;
+  --chart-2: #c4f36b;
+  --chart-3: #e8f2ed;
+  --chart-4: #f5eddc;
+  --chart-5: #6b8176;
+  --radius: 0.9rem;
+  --sidebar: #123c30;
+  --sidebar-foreground: #d2e3d8;
+  --sidebar-primary: #c4f36b;
+  --sidebar-primary-foreground: #123c30;
+  --sidebar-accent: #c4f36b;
+  --sidebar-accent-foreground: #123c30;
+  --sidebar-border: #285444;
+  --sidebar-ring: #c4f36b;
+  --success: #39734f;
+  --warning: #b45f3d;
+}
+
+.dark {
+  --background: #f7faf7;
+  --foreground: #173b30;
+  --card: #ffffff;
+  --card-foreground: #173b30;
+  --popover: #ffffff;
+  --popover-foreground: #1a1a1a;
+  --primary: #173b30;
+  --primary-foreground: #ffffff;
+  --secondary: #e8f2ed;
+  --secondary-foreground: #173b30;
+  --muted: #eef5f0;
+  --muted-foreground: #6b8176;
+  --accent: #c4f36b;
+  --accent-foreground: #173b30;
+  --destructive: #b45f3d;
+  --destructive-foreground: #ffffff;
+  --border: #d8e2db;
+  --input: #d8e2db;
+  --ring: #c4f36b;
+  --chart-1: #173b30;
+  --chart-2: #c4f36b;
+  --chart-3: #e8f2ed;
+  --chart-4: #f5eddc;
+  --chart-5: #6b8176;
+  --sidebar: #123c30;
+  --sidebar-foreground: #d2e3d8;
+  --sidebar-primary: #c4f36b;
+  --sidebar-primary-foreground: #123c30;
+  --sidebar-accent: #c4f36b;
+  --sidebar-accent-foreground: #123c30;
+  --sidebar-border: #285444;
+  --sidebar-ring: #c4f36b;
+  --success: #39734f;
+  --warning: #b45f3d;
+}
+
+@theme inline {
+  --font-sans: 'DM Sans', 'DM Sans Fallback', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'JetBrains Mono Fallback', monospace;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+}
+
+.deals-table th,
+.deals-table td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 639px) {
+  .deals-table th,
+  .deals-table td {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+
+  .deals-table th:nth-child(2),
+  .deals-table td:nth-child(2),
+  .deals-table th:nth-child(4),
+  .deals-table td:nth-child(4),
+  .deals-table th:nth-child(5),
+  .deals-table td:nth-child(5) {
+    display: none;
+  }
+
+  .deals-table th:first-child,
+  .deals-table td:first-child {
+    width: 58%;
+  }
+
+  .deals-table td {
+    height: 4.5rem;
+    vertical-align: middle;
+  }
+
+  .deals-table th:nth-child(3),
+  .deals-table td:nth-child(3) {
+    width: 25%;
+  }
+
+  .deals-table th:nth-child(6),
+  .deals-table td:nth-child(6) {
+    width: 17%;
+  }
+
+  .deals-table td:first-child .flex {
+    min-width: 0;
+  }
+
+  .deals-table td:first-child p {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
