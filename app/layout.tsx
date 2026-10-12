@@ -3,6 +3,7 @@ import React from "react";
 import { DM_Sans, JetBrains_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
+import StoreProvider from "./StoreProvider";
 
 const dmSans = DM_Sans({
   subsets: ["latin"],
@@ -57,7 +58,7 @@ export default function RootLayout({
         suppressHydrationWarning
         className={`${dmSans.variable} ${jetbrainsMono.variable} font-sans antialiased`}
       >
-        {children}
+        <StoreProvider>{children}</StoreProvider>
 
         <Analytics />
       </body>
