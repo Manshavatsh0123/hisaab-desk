@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+
 import {
   CalendarDays,
   CheckCircle2,
@@ -19,17 +20,15 @@ import { AccountFilters } from "../common/AccountFilters";
 import { DailyCollectionTable } from "../common/DailyCollectionTable";
 import { CollectionModal } from "../common/CollectionModal";
 import {
-  dailyCollectionResponse,
+  useGetCollectionAccountsQuery,
   type CollectionAccount,
   type CollectionStatus,
   type Frequency,
-} from "@/mocks/dailyCollectionResponse";
+  useLazyListCustomersQuery,
+  useLazyGetCustomerDetailsQuery,
+  useAddAdminCollectionMutation
+} from "@/features/customers/customersApi";
 
-/*
- * IMPORTANT:
- * This file is written to match your existing CollectionModal.tsx props.
- * CollectionModal is not modified.
- */
 
 const statusConfig: Record<
   CollectionStatus,
@@ -72,10 +71,6 @@ const frequencyOptions: Array<"all" | Frequency> = [
   "Daily",
   "Weekly",
   "Monthly",
-  "Quarterly",
-  "Half-Yearly",
-  "Yearly",
-  "One-Time",
 ];
 
 const statusOptions: Array<"all" | CollectionStatus> = [
@@ -102,20 +97,26 @@ function formatDate(value: string) {
     month: "short",
     year: "numeric",
   });
+
 }
 
 function formatMoney(value: number) {
+
   return `₹${(Number(value) || 0).toLocaleString("en-IN", {
     maximumFractionDigits: 2,
   })}`;
+
 }
 
 function monthLabel(monthValue: string) {
+
   const [year, month] = monthValue.split("-").map(Number);
+
   return new Date(year, month - 1, 1).toLocaleDateString("en-IN", {
     month: "long",
     year: "numeric",
   });
+
 }
 
 function getMonthCollected(account: CollectionAccount, month: string) {
@@ -125,80 +126,77 @@ function getMonthCollected(account: CollectionAccount, month: string) {
     .reduce((total, [, value]) => total + (Number(value) || 0), 0);
 }
 
-export function DealsSection() {
-  const [accounts, setAccounts] = useState<CollectionAccount[]>([]);
-  const [accountsLoading, setAccountsLoading] = useState(true);
-  const [accountsError, setAccountsError] = useState<string | null>(null);
+const EMPTY_COLLECTION_ACCOUNTS: CollectionAccount[] = [];
 
+function getQueryErrorMessage(error: unknown): string | null {
+  if (!error) return null;
+
+  if (typeof error === "object" && error !== null) {
+    const apiError = error as {
+      status?: string | number;
+      error?: string;
+      data?: { message?: string; error?: string };
+    };
+
+    if (apiError.data?.message) return apiError.data.message;
+    if (apiError.data?.error) return apiError.data.error;
+    if (apiError.error) return apiError.error;
+
+    if (apiError.status === 401) {
+      return "Your session is invalid or expired. Please sign in again.";
+    }
+    if (apiError.status === 403) {
+      return "You do not have permission to view customer accounts.";
+    }
+    if (apiError.status === "FETCH_ERROR") {
+      return "Cannot connect to the API server. Check that the backend is running.";
+    }
+  }
+
+  return "Unable to load customer accounts. Please try again.";
+}
+
+export function DealsSection() {
+
+  const {
+    data: queryAccounts,
+    isLoading: accountsLoading,
+    isFetching: accountsFetching,
+    error: queryError,
+    refetch,
+  } = useGetCollectionAccountsQuery({ page: 1, limit: 100 });
+
+  const apiAccounts = queryAccounts ?? EMPTY_COLLECTION_ACCOUNTS;
+
+  const [accounts, setAccounts] = useState<CollectionAccount[]>([]);
+
+  useEffect(() => {
+    setAccounts((current) => {
+      if (current === apiAccounts) return current;
+
+      return apiAccounts;
+    });
+  }, [apiAccounts]);
+
+  const accountsError = getQueryErrorMessage(queryError);
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] =
-    useState<"all" | CollectionStatus>("all");
-  const [frequencyFilter, setFrequencyFilter] =
-    useState<"all" | Frequency>("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | CollectionStatus>("all");
+
+  const [frequencyFilter, setFrequencyFilter] = useState<"all" | Frequency>("all");
   const [selectedMonth, setSelectedMonth] = useState("2026-10");
 
-  // One modal-open state only. No duplicate selectedAccount state.
+
+
   const [collectionOpen, setCollectionOpen] = useState(false);
   const [selectedAccountId, setSelectedAccountId] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState("");
   const [amount, setAmount] = useState("");
   const [submitting, setSubmitting] = useState(false);
-
   const [sortAscending, setSortAscending] = useState(false);
   const [formError, setFormError] = useState("");
-
   const today = localISODate();
-
-  const fetchAccounts = useCallback(async () => {
-    try {
-      setAccountsLoading(true);
-      setAccountsError(null);
-
-      // Mock API read. Replace this with your real GET endpoint when ready.
-      const response = await new Promise<typeof dailyCollectionResponse>(
-        (resolve) => {
-          setTimeout(() => resolve(dailyCollectionResponse), 350);
-        },
-      );
-
-      if (!response.success) {
-        throw new Error(
-          response.message || "Unable to load collection records.",
-        );
-      }
-
-      const normalizedAccounts: CollectionAccount[] =
-        response.data.accounts.map((account) => ({
-          ...account,
-          amount: Number(account.amount) || 0,
-          maturityAmount: Number(account.maturityAmount) || 0,
-          payments: Object.fromEntries(
-            Object.entries(account.payments ?? {}).map(([date, value]) => [
-              date,
-              Number(value) || 0,
-            ]),
-          ),
-        }));
-
-      setAccounts(normalizedAccounts);
-    } catch (error) {
-      setAccountsError(
-        error instanceof Error
-          ? error.message
-          : "Something went wrong while loading collections.",
-      );
-    } finally {
-      setAccountsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void fetchAccounts();
-  }, [fetchAccounts]);
-
   const filteredAccounts = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-
     return [...accounts]
       .filter((account) => {
         const matchesSearch =
@@ -213,12 +211,13 @@ export function DealsSection() {
 
         const matchesStatus =
           statusFilter === "all" || account.status === statusFilter;
+
         const matchesFrequency =
           frequencyFilter === "all" ||
           account.frequency === frequencyFilter;
-
         return matchesSearch && matchesStatus && matchesFrequency;
       })
+
       .sort((a, b) =>
         sortAscending ? a.amount - b.amount : b.amount - a.amount,
       );
@@ -231,6 +230,7 @@ export function DealsSection() {
   ]);
 
   const summary = useMemo(() => {
+
     const customerCount = new Set(
       filteredAccounts.map((account) => account.customerId),
     ).size;
@@ -246,6 +246,7 @@ export function DealsSection() {
     );
 
     const monthPrefix = `${selectedMonth}-`;
+
     const pending = filteredAccounts.filter((account) => {
       if (!account.nextDue?.startsWith(monthPrefix)) return false;
       return getMonthCollected(account, selectedMonth) < account.amount;
@@ -256,7 +257,6 @@ export function DealsSection() {
 
   const selectedApiAccount =
     accounts.find((account) => account.id === selectedAccountId) ?? null;
-
   const modalAccount = selectedApiAccount
     ? {
       id: selectedApiAccount.account,
@@ -267,10 +267,12 @@ export function DealsSection() {
         selectedApiAccount.amount -
         (selectedApiAccount.payments?.[today] ?? 0),
       ),
+
       totalPaid: Object.values(selectedApiAccount.payments ?? {}).reduce(
         (sum, value) => sum + (Number(value) || 0),
         0,
       ),
+
       status: statusConfig[selectedApiAccount.status]?.label ??
         selectedApiAccount.status,
     }
@@ -281,7 +283,9 @@ export function DealsSection() {
     if (!query) return selectedApiAccount;
 
     return (
+
       accounts.find((account) => {
+
         const fields = [
           account.customer,
           account.customerId,
@@ -289,34 +293,51 @@ export function DealsSection() {
           account.account,
           account.scheme,
         ];
+
         return fields.some((field) =>
+
           String(field ?? "").toLowerCase().includes(query),
+
         );
+
       }) ?? null
+
     );
+
   }, [accounts, selectedCustomer, selectedApiAccount]);
 
   const effectiveModalAccount = accountSearchMatch
     ? {
+
       id: accountSearchMatch.account,
       customerName: accountSearchMatch.customer,
       installmentAmount: accountSearchMatch.amount,
+
       remainingDue: Math.max(
         0,
         accountSearchMatch.amount -
         (accountSearchMatch.payments?.[today] ?? 0),
+
       ),
+
       totalPaid: Object.values(accountSearchMatch.payments ?? {}).reduce(
         (sum, value) => sum + (Number(value) || 0),
+
         0,
+
       ),
+
       status: statusConfig[accountSearchMatch.status]?.label ??
         accountSearchMatch.status,
+
     }
+
     : null;
 
   function openCollection(accountId?: string) {
+
     const account =
+
       accounts.find((item) => item.id === accountId) ??
       filteredAccounts[0] ??
       accounts[0] ??
@@ -327,6 +348,7 @@ export function DealsSection() {
     setAmount(account ? String(account.amount) : "");
     setFormError("");
     setCollectionOpen(true);
+
   }
 
   function closeCollection() {
@@ -337,6 +359,7 @@ export function DealsSection() {
   }
 
   async function handleAddCollection() {
+
     const chosenAccount = accountSearchMatch;
     const numericAmount = Number(amount);
 
@@ -354,15 +377,11 @@ export function DealsSection() {
       setSubmitting(true);
       setFormError("");
 
-      // Mock API write. Replace with your POST endpoint when ready.
       await new Promise((resolve) => setTimeout(resolve, 250));
-
       const paymentDate = today;
-
       setAccounts((current) =>
         current.map((account) => {
           if (account.id !== chosenAccount.id) return account;
-
           const nextPayments = {
             ...account.payments,
             [paymentDate]:
@@ -375,9 +394,9 @@ export function DealsSection() {
 
           const status: CollectionStatus =
             monthCollected >= account.amount ? "paid" : "due";
-
           return { ...account, payments: nextPayments, status };
         }),
+
       );
 
       setSelectedAccountId(chosenAccount.id);
@@ -388,11 +407,37 @@ export function DealsSection() {
       setFormError("Payment could not be saved. Please try again.");
     } finally {
       setSubmitting(false);
+
     }
+
   }
 
   function exportCsv() {
-    const headers = [
+    // Export every filtered account, not only the current visible table page.
+    // The layout mirrors the daily register: one row per account and one
+    // column for each day in the selected month.
+    const [year, monthNumber] = selectedMonth.split("-").map(Number);
+    const validMonth =
+      Number.isInteger(year) &&
+      Number.isInteger(monthNumber) &&
+      year > 0 &&
+      monthNumber >= 1 &&
+      monthNumber <= 12;
+
+    if (!validMonth) {
+      setFormError("Please select a valid month before exporting.");
+      return;
+    }
+
+    const daysInMonth = new Date(year, monthNumber, 0).getDate();
+    const days = Array.from({ length: daysInMonth }, (_, index) => index + 1);
+    const safeAmount = (value: unknown) => {
+      const amountValue = Number(value ?? 0);
+      return Number.isFinite(amountValue) ? amountValue : 0;
+    };
+
+    const headers: Array<string | number> = [
+      "S.No.",
       "Customer ID",
       "Customer",
       "Phone",
@@ -401,36 +446,23 @@ export function DealsSection() {
       "Frequency",
       "Start Date",
       "Installment",
-      "Payment Date",
-      "Amount",
+      ...days,
+      "Monthly Total",
     ];
 
-    const rows = filteredAccounts.flatMap((account) => {
-      const monthPayments = Object.entries(account.payments ?? {})
-        .filter(
-          ([date, value]) =>
-            date.startsWith(`${selectedMonth}-`) && value > 0,
-        )
-        .sort(([a], [b]) => a.localeCompare(b));
+    const rows = filteredAccounts.map((account, index) => {
+      const dayAmounts = days.map((day) => {
+        const date = `${selectedMonth}-${String(day).padStart(2, "0")}`;
+        return safeAmount(account.payments?.[date]);
+      });
 
-      if (monthPayments.length === 0) {
-        return [
-          [
-            account.customerId,
-            account.customer,
-            account.phone,
-            account.account,
-            account.scheme,
-            account.frequency,
-            account.startDate,
-            account.amount,
-            "",
-            0,
-          ],
-        ];
-      }
+      const monthlyTotal = dayAmounts.reduce(
+        (total, amountValue) => total + amountValue,
+        0,
+      );
 
-      return monthPayments.map(([date, value]) => [
+      return [
+        index + 1,
         account.customerId,
         account.customer,
         account.phone,
@@ -438,27 +470,63 @@ export function DealsSection() {
         account.scheme,
         account.frequency,
         account.startDate,
-        account.amount,
-        date,
-        value,
-      ]);
+        safeAmount(account.amount),
+        ...dayAmounts,
+        monthlyTotal,
+      ];
     });
 
-    const csv = [headers, ...rows]
-      .map((row) =>
-        row
-          .map((value) => `"${String(value).replaceAll('"', '""')}"`)
-          .join(","),
-      )
-      .join("\n");
+    // Add a totals row so the exported daily totals match the register footer.
+    const totalsRow: Array<string | number> = [
+      "",
+      "",
+      "TOTAL",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ...days.map((day) => {
+        const date = `${selectedMonth}-${String(day).padStart(2, "0")}`;
+        return filteredAccounts.reduce(
+          (total, account) =>
+            total + safeAmount(account.payments?.[date]),
+          0,
+        );
+      }),
+      filteredAccounts.reduce(
+        (total, account) =>
+          total +
+          days.reduce((accountTotal, day) => {
+            const date = `${selectedMonth}-${String(day).padStart(2, "0")}`;
+            return accountTotal + safeAmount(account.payments?.[date]);
+          }, 0),
+        0,
+      ),
+    ];
 
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const escapeCsvValue = (value: string | number) =>
+      `"${String(value).replaceAll('"', '""')}"`;
+
+    const csvContent = [headers, ...rows, totalsRow]
+      .map((row) => row.map(escapeCsvValue).join(","))
+      .join("\r\n");
+
+    // UTF-8 BOM helps Excel open the CSV correctly, including Indian names.
+    const blob = new Blob(["\uFEFF", csvContent], {
+      type: "text/csv;charset=utf-8;",
+    });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
     link.download = `collection-register-${selectedMonth}.csv`;
+    document.body.appendChild(link);
     link.click();
-    URL.revokeObjectURL(url);
+    link.remove();
+
+    // Revoke after the browser has started the download.
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
   const dealStats: StatItem[] = [
@@ -469,6 +537,7 @@ export function DealsSection() {
       icon: Users,
       tone: "neutral",
     },
+
     {
       label: "Collected this month",
       value: formatMoney(summary.collected),
@@ -476,6 +545,7 @@ export function DealsSection() {
       icon: Wallet,
       tone: "success",
     },
+
     {
       label: "Installment value",
       value: formatMoney(summary.expected),
@@ -483,6 +553,7 @@ export function DealsSection() {
       icon: IndianRupee,
       tone: "primary",
     },
+
     {
       label: "Pending accounts",
       value: summary.pending,
@@ -493,39 +564,25 @@ export function DealsSection() {
   ];
 
   return (
+
     <div className="flex flex-col gap-6 text-[var(--hs-text)]">
       <div className="px-[var(--hs-page-padding-x)] py-[var(--hs-page-padding-y)]">
-        <section className="mb-7 flex flex-col gap-4">
-          <PageHeader
-            eyebrow={`Customers / ${monthLabel(selectedMonth)}`}
-            title="Customer collection"
-            highlight="register"
-            subtitle="Track account-wise payments by date."
-            action={{
-              label: "Add collection",
-              onClick: () => openCollection(),
-              icon: <Plus className="size-4" />,
-            }}
-          />
-          <StatsCards items={dealStats} columns={4} />
-        </section>
 
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-[var(--hs-text-secondary)]">
-            Showing{" "}
-            <span className="font-semibold text-[var(--hs-text)]">
-              {filteredAccounts.length}
-            </span>{" "}
-            of {accounts.length} accounts
-          </p>
-          <button
-            type="button"
-            onClick={() => setSortAscending((current) => !current)}
-            className="rounded-lg border border-[var(--hs-border)] bg-[var(--hs-surface)] px-3 py-2 text-sm font-medium hover:bg-[var(--hs-hover)]"
-          >
-            Installment: {sortAscending ? "Low to high" : "High to low"}
-          </button>
-        </div>
+
+        <PageHeader
+          eyebrow={`Customers / ${monthLabel(selectedMonth)}`}
+          title="Customer collection"
+          highlight="register"
+          subtitle="Track account-wise payments by date."
+          action={{
+            label: "Add collection",
+            onClick: () => openCollection(),
+            icon: <Plus className="size-4" />,
+          }}
+        />
+
+        <StatsCards items={dealStats} columns={4} />
+
 
         <AccountFilters
           searchQuery={searchQuery}
@@ -553,71 +610,40 @@ export function DealsSection() {
           resultLabel="accounts"
         />
 
-        <div className="mt-5">
-          <DailyCollectionTable
-            accounts={filteredAccounts}
-            selectedMonth={selectedMonth}
-            today={today}
-            statusConfig={statusConfig}
-            loading={accountsLoading}
-            error={accountsError}
-            onRetry={fetchAccounts}
-            onAddPayment={openCollection}
-            formatMoney={formatMoney}
-            formatDate={formatDate}
-            monthLabel={monthLabel}
-          />
-        </div>
 
+        <DailyCollectionTable
+          accounts={filteredAccounts}
+          selectedMonth={selectedMonth}
+          today={today}
+          loading={accountsLoading || accountsFetching}
+          error={accountsError}
+          onRetry={() => void refetch()}
+          onAddCollection={openCollection}
+          formatMoney={formatMoney}
+          formatDate={formatDate}
+          monthLabel={monthLabel}
+          pageSize={20}
+        />
 
         <CollectionModal
           open={collectionOpen}
           onClose={closeCollection}
-          searchValue={selectedCustomer}
-          onSearchChange={(value) => {
-            setSelectedCustomer(value);
-            setFormError("");
-            const query = value.trim().toLowerCase();
-            if (!query) return;
-
-            const match = accounts.find((account) =>
-              [
-                account.customer,
-                account.customerId,
-                account.phone,
-                account.account,
-                account.scheme,
-              ].some((field) =>
-                String(field ?? "").toLowerCase().includes(query),
-              ),
-            );
-
-            if (match) {
-              setSelectedAccountId(match.id);
-              setAmount(String(match.amount));
-            }
+          onSuccess={() => {
+            void refetch();
           }}
-          account={effectiveModalAccount}
-          amount={amount}
-          onAmountChange={(value) => {
-            setAmount(value);
-            setFormError("");
-          }}
-          onSubmit={handleAddCollection}
-          submitting={submitting}
         />
 
         {collectionOpen && formError && (
-          <div
-            role="alert"
-            className="fixed bottom-5 right-5 z-[60] max-w-sm rounded-lg border border-[var(--hs-primary-border)] bg-[var(--hs-danger-light)] px-4 py-3 text-sm text-[var(--hs-danger)] shadow-lg"
-          >
+          <div role="alert" className="fixed bottom-5 right-5 z-[60] max-w-sm rounded-lg border border-[var(--hs-primary-border)] bg-[var(--hs-danger-light)] px-4 py-3 text-sm text-[var(--hs-danger)] shadow-lg">
             {formError}
           </div>
         )}
+
       </div>
     </div>
+
   );
+
 }
 
 export default DealsSection;

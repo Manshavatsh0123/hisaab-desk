@@ -1,6 +1,6 @@
+
 "use client";
 
-import type { ReactNode } from "react";
 import {
     CalendarDays,
     Download,
@@ -9,7 +9,12 @@ import {
     X,
 } from "lucide-react";
 
-type AccountFiltersProps<TStatus extends string, TFrequency extends string> = {
+import SelectControl from "./SelectControl";
+
+type AccountFiltersProps<
+    TStatus extends string,
+    TFrequency extends string,
+> = {
     searchQuery: string;
     setSearchQuery: (value: string) => void;
 
@@ -53,48 +58,72 @@ export function AccountFilters<
     onExport,
     resultCount,
     resultLabel = "accounts",
-    description = "Each account is listed separately, including multiple accounts belonging to the same customer.",
+    description = "Search and filter customer accounts.",
 }: AccountFiltersProps<TStatus, TFrequency>) {
     const hasFilters =
         searchQuery.trim() !== "" ||
         statusFilter !== allStatusValue ||
         frequencyFilter !== allFrequencyValue;
 
-    function clearFilters() {
+    const clearFilters = () => {
         setSearchQuery("");
         setStatusFilter(allStatusValue);
         setFrequencyFilter(allFrequencyValue);
-    }
+    };
 
     const inputClass =
-        "h-11 w-full min-w-0 rounded-lg border border-[var(--hs-border)] bg-[var(--hs-white)] px-3 text-sm text-[var(--hs-text)] outline-none transition placeholder:text-[var(--hs-text-muted)] hover:border-[var(--hs-primary-border)] focus:border-[var(--hs-primary)] focus:ring-2 focus:ring-[var(--hs-primary-light)]";
+        "h-10 w-full min-w-0 rounded-[8px] border border-[var(--hs-border)] bg-white text-sm text-[var(--hs-text)] transition placeholder:text-[var(--hs-text-muted)] hover:border-[var(--hs-primary-border)] focus:border-[var(--hs-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--hs-primary)]/10";
+
+    const statusLabelsForSelect = statusOptions.map((option) => {
+        if (option === "all") return "All statuses";
+
+        return statusLabels[option] ?? option;
+    });
+
+    const frequencyLabelsForSelect = frequencyOptions.map((option) => {
+        if (option === "all") return "All frequencies";
+
+        return option.charAt(0).toUpperCase() + option.slice(1);
+    });
+
+    const selectedStatusLabel =
+        statusFilter === allStatusValue
+            ? "All statuses"
+            : statusLabels[statusFilter] ?? statusFilter;
+
+    const selectedFrequencyLabel =
+        frequencyFilter === allFrequencyValue
+            ? "All frequencies"
+            : frequencyFilter;
 
     return (
-        <section className="flex flex-col gap-4 rounded-xl border border-[var(--hs-border)] bg-[var(--hs-surface)] p-4 sm:p-5">
-            {/* Section heading */}
-            <div className="flex items-center gap-2">
-                <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-[var(--hs-primary-light)] text-[var(--hs-primary)]">
-                    <SlidersHorizontal className="size-4" />
+        <section className="rounded-[8px] border border-[var(--hs-border)] bg-white p-4 sm:p-5 mt-4 mb-4">
+            {/* Heading */}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3">
+                    <div className="grid size-10 shrink-0 place-items-center rounded-[8px] bg-[var(--hs-primary-light)] text-[var(--hs-primary)]">
+                        <SlidersHorizontal className="size-[18px]" />
+                    </div>
+
+                    <div className="min-w-0">
+                        <h3 className="text-sm font-bold text-[var(--hs-text)]">
+                            Search & filters
+                        </h3>
+                        <p className="mt-0.5 text-xs text-[var(--hs-text-secondary)]">
+                            {description}
+                        </p>
+                    </div>
                 </div>
 
-                <div>
-                    <h3 className="text-sm font-semibold text-[var(--hs-text)]">
-                        Search and filters
-                    </h3>
-                    <p className="mt-0.5 text-xs text-[var(--hs-text-muted)]">
-                        Find accounts using the options below.
-                    </p>
-                </div>
+                <span className="inline-flex shrink-0 items-center rounded-[8px] border border-[var(--hs-primary-border)] bg-[var(--hs-primary-light)] px-2.5 py-1 text-xs font-semibold text-[var(--hs-primary)]">
+                    {resultCount} {resultLabel}
+                </span>
             </div>
 
-            {/* Filter controls */}
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(240px,1fr)_170px_175px_175px_auto]">
+            {/* Controls */}
+            <div className="mt-5 grid grid-cols-1 items-center gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(220px,1fr)_165px_175px_175px_auto]">
                 {/* Search */}
-                <label className="relative block min-w-0 sm:col-span-2 xl:col-span-1">
-                    <span className="sr-only">
-                        Search customers and accounts
-                    </span>
-
+                <div className="relative min-w-0 sm:col-span-2 xl:col-span-1">
                     <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--hs-text-muted)]" />
 
                     <input
@@ -102,57 +131,54 @@ export function AccountFilters<
                         type="search"
                         value={searchQuery}
                         onChange={(event) => setSearchQuery(event.target.value)}
-                        placeholder="Search name, customer ID, account no..."
-                        className={`${inputClass} pl-10`}
+                        placeholder="Search name, customer ID, account..."
+                        className={`${inputClass} pl-10 pr-9`}
                     />
-                </label>
 
-                {/* Status */}
-                <select
-                    aria-label="Filter by payment status"
-                    value={statusFilter}
-                    onChange={(event) =>
-                        setStatusFilter(event.target.value as TStatus)
-                    }
-                    className={inputClass}
-                >
-                    <option value={allStatusValue}>All statuses</option>
+                    {searchQuery && (
+                        <button
+                            type="button"
+                            aria-label="Clear search"
+                            onClick={() => setSearchQuery("")}
+                            className="absolute right-2 top-1/2 grid size-7 -translate-y-1/2 place-items-center rounded-[6px] text-[var(--hs-text-muted)] hover:bg-[var(--hs-primary-light)] hover:text-[var(--hs-primary)]"
+                        >
+                            <X className="size-4" />
+                        </button>
+                    )}
+                </div>
 
-                    {statusOptions
-                        .filter((value) => value !== allStatusValue)
-                        .map((value) => (
-                            <option key={value} value={value}>
-                                {statusLabels[value] ?? value}
-                            </option>
-                        ))}
-                </select>
+                {/* Status dropdown */}
+                <SelectControl
+                    ariaLabel="Filter by payment status"
+                    value={selectedStatusLabel}
+                    onChange={(label) => {
+                        const index = statusOptions.findIndex(
+                            (option) => (statusLabels[option] ?? option) === label
+                        );
 
-                {/* Frequency */}
-                <select
-                    aria-label="Filter by collection frequency"
-                    value={frequencyFilter}
-                    onChange={(event) =>
-                        setFrequencyFilter(event.target.value as TFrequency)
-                    }
-                    className={inputClass}
-                >
-                    <option value={allFrequencyValue}>All frequencies</option>
+                        if (index >= 0) setStatusFilter(statusOptions[index]);
+                    }}
+                    options={statusLabelsForSelect}
+                    placeholder="All statuses"
+                />
 
-                    {frequencyOptions
-                        .filter((value) => value !== allFrequencyValue)
-                        .map((value) => (
-                            <option key={value} value={value}>
-                                {value}
-                            </option>
-                        ))}
-                </select>
+                {/* Frequency dropdown */}
+                <SelectControl
+                    ariaLabel="Filter by collection frequency"
+                    value={selectedFrequencyLabel}
+                    onChange={(value) => {
+                        if (frequencyOptions.includes(value as TFrequency)) {
+                            setFrequencyFilter(value as TFrequency);
+                        }
+                    }}
+                    options={[...frequencyOptions]}
+                    placeholder="All frequencies"
+                />
 
-
-                <label className="flex h-11 min-w-0 items-center gap-2 rounded-lg border border-[var(--hs-border)] bg-[var(--hs-white)] px-3 transition hover:border-[var(--hs-primary-border)] focus-within:border-[var(--hs-primary)] focus-within:ring-2 focus-within:ring-[var(--hs-primary-light)]">
+                {/* Month picker */}
+                <label className="flex h-10 min-w-0 items-center gap-2 rounded-[8px] border border-[var(--hs-border)] bg-white px-3 transition hover:border-[var(--hs-primary-border)] focus-within:border-[var(--hs-primary)] focus-within:ring-2 focus-within:ring-[var(--hs-primary)]/10">
                     <CalendarDays className="size-4 shrink-0 text-[var(--hs-text-muted)]" />
-
                     <span className="sr-only">Collection month</span>
-
                     <input
                         aria-label="Collection month"
                         type="month"
@@ -162,18 +188,41 @@ export function AccountFilters<
                                 setSelectedMonth(event.target.value);
                             }
                         }}
-                        className="min-w-0 w-full bg-transparent text-sm text-[var(--hs-text)] outline-none"
+                        className="w-full min-w-0 bg-transparent text-sm text-[var(--hs-text)] outline-none"
                     />
                 </label>
 
+                {/* Export */}
                 <button
                     type="button"
                     onClick={onExport}
-                    className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-[var(--hs-border)] bg-[var(--hs-white)] px-4 text-sm font-semibold text-[var(--hs-text)] transition hover:border-[var(--hs-primary-border)] hover:bg-[var(--hs-primary-light)] hover:text-[var(--hs-primary)]"
+                    className="inline-flex h-10 items-center justify-center gap-2 rounded-[8px] bg-[var(--hs-primary)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--hs-primary-dark)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--hs-primary)]/30 focus-visible:ring-offset-2"
                 >
-                    <Download className="size-4" />
+                    <Download className="size-4 shrink-0" />
                     Export CSV
                 </button>
+            </div>
+
+            {/* Footer */}
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-[var(--hs-border-light)] pt-3">
+                <p className="text-xs text-[var(--hs-text-secondary)]">
+                    Showing{" "}
+                    <span className="font-semibold text-[var(--hs-text)]">
+                        {resultCount}
+                    </span>{" "}
+                    {resultLabel}
+                </p>
+
+                {hasFilters && (
+                    <button
+                        type="button"
+                        onClick={clearFilters}
+                        className="inline-flex items-center gap-1.5 rounded-[6px] px-2 py-1 text-xs font-semibold text-[var(--hs-primary)] transition hover:bg-[var(--hs-primary-light)]"
+                    >
+                        <X className="size-3.5" />
+                        Clear filters
+                    </button>
+                )}
             </div>
         </section>
     );

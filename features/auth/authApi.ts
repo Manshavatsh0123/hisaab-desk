@@ -6,13 +6,42 @@ export interface AdminLoginRequest {
   password: string;
 }
 
+export interface AuthSession {
+  access_token: string;
+  refresh_token: string;
+  expires_at?: number;
+  expires_in?: number;
+  token_type?: string;
+}
+
 export interface AdminLoginResponse {
   success?: boolean;
   message?: string;
-  session?: {
-    access_token?: string;
+  user?: {
+    id?: string;
+    email?: string;
   };
+  profile?: {
+    id?: string;
+    role?: string;
+    username?: string;
+    full_name?: string;
+    status?: string;
+  };
+  session?: AuthSession;
   [key: string]: unknown;
+}
+
+export interface RefreshSessionRequest {
+  refresh_token: string;
+}
+
+export interface RefreshSessionResponse {
+  access_token: string;
+  refresh_token: string;
+  expires_at?: number;
+  expires_in?: number;
+  token_type?: string;
 }
 
 export const authApi = baseApi.injectEndpoints({
@@ -27,7 +56,22 @@ export const authApi = baseApi.injectEndpoints({
         body: credentials,
       }),
     }),
+
+    refreshSession: builder.mutation<
+      RefreshSessionResponse,
+      RefreshSessionRequest
+    >({
+      query: (body) => ({
+        url: "/auth/refresh",
+        method: "POST",
+        body,
+      }),
+    }),
   }),
+  overrideExisting: false,
 });
 
-export const { useAdminLoginMutation } = authApi;
+export const {
+  useAdminLoginMutation,
+  useRefreshSessionMutation,
+} = authApi;

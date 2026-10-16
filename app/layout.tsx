@@ -20,27 +20,13 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: "HisaabSaathi",
-  description:
-    "HisaabSaathi - Digital Collection & Record Book",
+  description: "HisaabSaathi - Digital Collection & Record Book",
   generator: "HisaabSaathi",
 
   icons: {
-    icon: [
-      {
-        url: "/icon-light-32x32.png",
-        media: "(prefers-color-scheme: light)",
-      },
-      {
-        url: "/icon-dark-32x32.png",
-        media: "(prefers-color-scheme: dark)",
-      },
-      {
-        url: "/icon.svg",
-        type: "image/svg+xml",
-      },
-    ],
-
-    apple: "/apple-icon.png",
+    icon: "/Logo1.png",
+    shortcut: "/Logo1.png",
+    apple: "/Logo1.png",
   },
 };
 

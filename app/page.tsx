@@ -1,17 +1,23 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
-import { Sidebar } from "@/components/dashboard/sidebar";
+import { useCallback, useEffect, useState } from "react";
+import { useDispatch } from "react-redux";
+
 import { Header } from "@/components/dashboard/header";
 import { OverviewSection } from "@/components/dashboard/sections/overview";
 import { PipelineSection } from "@/components/dashboard/sections/pipeline";
 import { DealsSection } from "@/components/dashboard/sections/deals";
 import { TeamSection } from "@/components/dashboard/sections/team";
 import { ApprovalsSection } from "@/components/dashboard/sections/approvals";
-import { ReportsSection } from "@/components/dashboard/sections/reports";
-import { SettingsSection } from "@/components/dashboard/sections/settings";
 import AdminLogin from "@/components/dashboard/AdminLogin";
+
+import {
+  AUTH_KEYS,
+  baseApi,
+  clearStoredSession,
+  SESSION_MAX_AGE_MS,
+} from "@/lib/baseApi";
 
 export type Section =
   | "overview"
@@ -23,30 +29,63 @@ export type Section =
   | "settings";
 
 export default function Dashboard() {
+  const dispatch = useDispatch();
+
   const [activeSection, setActiveSection] =
     useState<Section>("overview");
-
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-
   const [authChecked, setAuthChecked] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Check for an existing login when the page loads.
   useEffect(() => {
-    const token = localStorage.getItem("hisaabsaathi_token");
+    const token = localStorage.getItem(AUTH_KEYS.access);
+    const startedAt = Number(
+      localStorage.getItem(AUTH_KEYS.startedAt),
+    );
 
-    setIsAuthenticated(Boolean(token));
+    const browserSession = sessionStorage.getItem(
+      "hisaabsaathi_browser_session",
+    );
+
+    const validStart =
+      Number.isFinite(startedAt) && startedAt > 0;
+
+    const sessionWithinLimit =
+      validStart &&
+      Date.now() - startedAt < SESSION_MAX_AGE_MS;
+
+    if (token && browserSession === "active" && sessionWithinLimit) {
+      setIsAuthenticated(true);
+    } else {
+      clearStoredSession();
+      sessionStorage.removeItem("hisaabsaathi_browser_session");
+      dispatch(baseApi.util.resetApiState());
+      setIsAuthenticated(false);
+    }
+
     setAuthChecked(true);
-  }, []);
+  }, [dispatch]);
 
-  // Called by AdminLogin after successful authentication.
-  function handleLoginSuccess() {
+  const handleLoginSuccess = useCallback(() => {
+    sessionStorage.setItem(
+      "hisaabsaathi_browser_session",
+      "active",
+    );
+
     setIsAuthenticated(true);
     setActiveSection("overview");
-  }
+  }, []);
 
-  const renderSection = () => {
+  const handleLogout = useCallback(() => {
+    sessionStorage.removeItem("hisaabsaathi_browser_session");
+
+    clearStoredSession();
+    dispatch(baseApi.util.resetApiState());
+
+    setIsAuthenticated(false);
+    setActiveSection("overview");
+  }, [dispatch]);
+
+  function renderSection() {
     switch (activeSection) {
       case "overview":
         return (
@@ -68,12 +107,6 @@ export default function Dashboard() {
       case "approvals":
         return <ApprovalsSection />;
 
-      case "reports":
-        return <ReportsSection />;
-
-      case "settings":
-        return <SettingsSection />;
-
       default:
         return (
           <OverviewSection
@@ -82,64 +115,38 @@ export default function Dashboard() {
           />
         );
     }
-  };
+  }
 
-  // Avoid showing the login or dashboard before checking storage.
   if (!authChecked) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <p className="text-sm text-muted-foreground">
+      <div className="flex min-h-screen items-center justify-center bg-[var(--hs-background)]">
+        <p className="text-sm text-[var(--hs-text-secondary)]">
           Checking authentication...
         </p>
       </div>
     );
   }
 
-  // Show login if there is no saved token.
   if (!isAuthenticated) {
     return <AdminLogin onLoginSuccess={handleLoginSuccess} />;
   }
 
-  // Render the dashboard on the current page after login.
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar
+    <div className="min-h-screen bg-[var(--hs-background)]">
+      <Header
         activeSection={activeSection}
         onSectionChange={setActiveSection}
-        collapsed={sidebarCollapsed}
-        onCollapsedChange={setSidebarCollapsed}
-        mobileOpen={mobileSidebarOpen}
-        onMobileClose={() => setMobileSidebarOpen(false)}
+        onLogout={handleLogout}
       />
 
-      {mobileSidebarOpen && (
-        <button
-          type="button"
-          aria-label="Close navigation"
-          className="fixed inset-0 z-40 bg-black/30 lg:hidden"
-          onClick={() => setMobileSidebarOpen(false)}
-        />
-      )}
-
-      <div
-        className={`flex w-full min-w-0 flex-1 flex-col transition-all duration-300 ease-out ${
-          sidebarCollapsed ? "lg:ml-[72px]" : "lg:ml-[260px]"
-        }`}
-      >
-        <Header
-          activeSection={activeSection}
-          onMenuClick={() => setMobileSidebarOpen(true)}
-        />
-
-        <main className="min-w-0 flex-1 overflow-auto p-3 sm:p-4 md:p-6">
-          <div
-            key={activeSection}
-            className="animate-in fade-in slide-in-from-bottom-4 duration-500"
-          >
-            {renderSection()}
-          </div>
-        </main>
-      </div>
+      <main className="mx-auto w-full max-w-[1600px] px-4 py-5 sm:px-6 sm:py-7 lg:px-8">
+        <div
+          key={activeSection}
+          className="animate-in fade-in slide-in-from-bottom-2 duration-300"
+        >
+          {renderSection()}
+        </div>
+      </main>
     </div>
   );
 }

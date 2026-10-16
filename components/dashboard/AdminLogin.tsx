@@ -13,6 +13,9 @@ import {
   XCircle,
 } from "lucide-react";
 import { useAdminLoginMutation } from "@/features/auth/authApi";
+import { AUTH_KEYS, saveTokens } from "@/lib/baseApi";
+import Image from "next/image";
+
 
 interface AdminLoginProps {
   onLoginSuccess: () => void;
@@ -37,6 +40,7 @@ export default function AdminLogin({
     }
   }
 
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -51,30 +55,40 @@ export default function AdminLogin({
     setError("");
 
     try {
-      const data = await adminLogin({
-        email,
-        password,
-      }).unwrap();
+      const data = await adminLogin({ email, password }).unwrap();
+      const session = data.session;
 
-      const token = data.session?.access_token;
-
-      if (!token) {
-        setError("The server did not return an access token.");
+      if (!session?.access_token || !session?.refresh_token) {
+        setError(
+          "The server did not return both authentication tokens. Please check the login API.",
+        );
         return;
       }
 
-      // Save authentication details.
-      localStorage.setItem("hisaabsaathi_token", token);
-      localStorage.setItem("hisaabsaathi_user", JSON.stringify(data));
+      // Save access + refresh tokens.
+      saveTokens(session);
 
-      // Notify page.tsx to render the dashboard.
+      // Start a new 24-hour application session.
+      localStorage.setItem(
+        AUTH_KEYS.startedAt,
+        String(Date.now()),
+      );
+
+      // Store user/profile information, not the password.
+      localStorage.setItem(
+        AUTH_KEYS.user,
+        JSON.stringify({
+          user: data.user,
+          profile: data.profile,
+        }),
+      );
+
       onLoginSuccess();
     } catch (err: unknown) {
+      console.error("Login error:", err);
+
       const apiError = err as {
-        data?: {
-          message?: string;
-          error?: string;
-        };
+        data?: { message?: string; error?: string };
         error?: string;
         status?: string | number;
       };
@@ -92,6 +106,7 @@ export default function AdminLogin({
       }
     }
   }
+
 
   return (
     <main className="relative isolate flex min-h-dvh w-full items-center justify-center overflow-hidden bg-[#f8f8f9] px-4 py-6">
@@ -127,10 +142,13 @@ export default function AdminLogin({
         <div className="rounded-[24px] border border-white/90 bg-white/80 p-6 shadow-[0_24px_80px_rgba(38,54,77,0.12)] backdrop-blur-2xl sm:p-9">
           {/* Logo */}
           <div className="mb-8 flex items-center justify-center">
-            <img
-              src="/Logo_Hisaab.png"
+            <Image
+              src="/Logo1.png"
               alt="HisaabSaathi"
-              className="h-20 w-auto max-w-[240px] object-contain"
+              width={600}
+              height={100}
+              className="h-32 w-auto max-w-[320px] object-contain"
+              priority
             />
           </div>
 

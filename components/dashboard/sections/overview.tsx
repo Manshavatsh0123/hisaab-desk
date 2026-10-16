@@ -1,150 +1,73 @@
 "use client";
 
 import { useMemo, useState } from "react";
-
-import {
-  AlertCircle,
-  CalendarDays,
-  CheckCircle2,
-  CreditCard,
-  Plus,
-  Search,
-  ShieldCheck,
-  UserRound,
-  Users,
-  Wallet,
-  X,
-} from "lucide-react";
+import { AlertCircle, Bell, CalendarDays, CheckCircle2, Clock3, CreditCard, RefreshCw, Wallet, } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select";
 import { PageHeader } from "../common/PageHeader";
 import { StatItem, StatsCards } from "../common/StatsCards";
-import { CollectionTableSection } from "../common/CollectionTableSection";
-import { CollectionAccount, CollectionModal } from "../common/CollectionModal";
+import { useGetDashboardSummaryQuery, useGetRecentCollectionsQuery, useGetRecentNotificationsQuery, } from "@/features/dashboard/dashboardApi";
+import NotificationsTable from "./NotificationsTable";
+import CollectionTable from "./CollectionTable";
+import SectionHeader from "./SectionHeader";
+import getErrorMessage from "./getErrorMessage";
 
+const formatMoney = (amount: number | null | undefined) => `₹${Number(amount ?? 0).toLocaleString("en-IN")}`;
 
-const paidCustomers = [
-  {
-    name: "Rahul Kumar",
-    id: "JS1024",
-    amount: "₹500",
-    scheme: "RD",
-    time: "09:42 AM",
-    staff: "Amit",
-  },
-  {
-    name: "Priya Singh",
-    id: "JS1088",
-    amount: "₹1,000",
-    scheme: "Monthly",
-    time: "10:15 AM",
-    staff: "Admin",
-  },
-  {
-    name: "Suresh Yadav",
-    id: "JS1016",
-    amount: "₹500",
-    scheme: "RD",
-    time: "11:08 AM",
-    staff: "Ravi",
-  },
-  {
-    name: "Meena Devi",
-    id: "JS1102",
-    amount: "₹2,000",
-    scheme: "Monthly",
-    time: "12:26 PM",
-    staff: "Amit",
-  },
-];
+const formatDate = (value?: string | null) => {
 
-const dueCustomers = [
-  {
-    name: "Amit Kumar",
-    id: "JS1042",
-    amount: "₹500",
-    scheme: "RD",
-    dueDate: "26 Sep",
-    staff: "Ravi",
-  },
-  {
-    name: "Neha Devi",
-    id: "JS1091",
-    amount: "₹1,000",
-    scheme: "Monthly",
-    dueDate: "26 Sep",
-    staff: "Amit",
-  },
-  {
-    name: "Vikash Sharma",
-    id: "JS1067",
-    amount: "₹500",
-    scheme: "RD",
-    dueDate: "26 Sep",
-    staff: "Ravi",
-  },
-];
+  if (!value) return "—";
 
-const collectionSummary = [
-  {
-    day: "Mon",
-    collected: 4200,
-    due: 1800,
-  },
-  {
-    day: "Tue",
-    collected: 5800,
-    due: 1200,
-  },
-  {
-    day: "Wed",
-    collected: 3600,
-    due: 2400,
-  },
-  {
-    day: "Thu",
-    collected: 6900,
-    due: 900,
-  },
-  {
-    day: "Fri",
-    collected: 5100,
-    due: 1500,
-  },
-  {
-    day: "Sat",
-    collected: 7300,
-    due: 800,
-  },
-  {
-    day: "Sun",
-    collected: 4000,
-    due: 1100,
-  },
-];
+  const date = new Date(`${value.slice(0, 10)}T00:00:00`);
 
-const maxCollection = Math.max(
-  ...collectionSummary.map(
-    (item) => item.collected
-  )
-);
-
-const totalDue = dueCustomers.reduce(
-  (sum, customer) =>
-    sum +
-    Number(
-      customer.amount.replace(/[₹,]/g, "")
-    ),
-  0
-);
-
-const sampleAccount: CollectionAccount = {
-  id: "JS1024",
-  customerName: "Rahul Kumar",
-  installmentAmount: 1000,
-  remainingDue: 3000,
-  totalPaid: 2000,
-  status: "Active",
+  return Number.isNaN(date.getTime())
+    ? value
+    : date.toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
 };
 
+const PAGE_SIZE = 10;
+function Pagination({
+  page,
+  totalItems,
+  onPageChange,
+}: {
+  page: number;
+  totalItems: number;
+  onPageChange: (page: number) => void;
+}) {
+  const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
+  const start = totalItems === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+  const end = Math.min(page * PAGE_SIZE, totalItems);
+
+  return (
+    <div className="mt-4 flex flex-col gap-3 border-t border-[var(--hs-border)] pt-4 sm:flex-row sm:items-center sm:justify-between">
+      <p className="text-xs text-[var(--hs-text-secondary)]">
+        Showing <span className="font-semibold text-[var(--hs-text)]">{start}–{end}</span> of{" "}
+        <span className="font-semibold text-[var(--hs-text)]">{totalItems}</span> records
+      </p>
+      {totalItems > PAGE_SIZE && (
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <button
+            type="button"
+            onClick={() => onPageChange(Math.max(1, page - 1))}
+            disabled={page <= 1}
+            className="inline-flex h-9 items-center rounded-lg border border-[var(--hs-border)] bg-[var(--hs-white)] px-3 text-xs font-semibold text-[var(--hs-text)] transition hover:border-[var(--hs-primary)] hover:bg-[var(--hs-background)] disabled:cursor-not-allowed disabled:opacity-40"
+          >Previous</button>
+          <span className="min-w-20 rounded-lg bg-[var(--hs-background)] px-3 py-2 text-center text-xs font-semibold text-[var(--hs-text)]">{page} / {totalPages}</span>
+          <button
+            type="button"
+            onClick={() => onPageChange(Math.min(totalPages, page + 1))}
+            disabled={page >= totalPages}
+            className="inline-flex h-9 items-center rounded-lg border border-[var(--hs-border)] bg-[var(--hs-white)] px-3 text-xs font-semibold text-[var(--hs-text)] transition hover:border-[var(--hs-primary)] hover:bg-[var(--hs-background)] disabled:cursor-not-allowed disabled:opacity-40"
+          >Next</button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function OverviewSection({
   onNavigateToApprovals,
@@ -154,162 +77,248 @@ export function OverviewSection({
   onNavigateToAddCustomer: () => void;
 }) {
 
-  const [collectionOpen, setCollectionOpen] = useState(false);
-  const [selectedCustomer, setSelectedCustomer] = useState("");
-  const [selectedAccount, setSelectedAccount] =
-    useState<CollectionAccount | null>(null);
-  const [amount, setAmount] = useState("");
-  const [submitting, setSubmitting] = useState(false);
+  const [collectionStatus, setCollectionStatus] = useState("ALL");
+  const [collectionPage, setCollectionPage] = useState(1);
+  const [notificationPage, setNotificationPage] = useState(1);
 
+  const summaryQuery = useGetDashboardSummaryQuery();
+  const collectionsQuery = useGetRecentCollectionsQuery();
+  const notificationsQuery = useGetRecentNotificationsQuery();
 
-  async function handleAddCollection() {
-    if (!selectedAccount || !amount || Number(amount) <= 0) {
-      return;
-    }
+  const summary = summaryQuery.data?.summary;
+  const allCollections = collectionsQuery.data?.collections ?? [];
+  const notifications = notificationsQuery.data?.notifications ?? [];
 
-    setSubmitting(true);
-
-    try {
-      // Call your existing collection POST API here.
-      // Send selectedAccount.id and Number(amount).
-      // Refresh account details after a successful response.
-
-      console.log({
-        accountId: selectedAccount.id,
-        amount: Number(amount),
-      });
-
-      setCollectionOpen(false);
-      setSelectedCustomer("");
-      setSelectedAccount(null);
-      setAmount("");
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-
-  const todayTotal = useMemo(
-    () =>
-      paidCustomers.reduce(
-        (sum, customer) =>
-          sum +
-          Number(
-            customer.amount.replace(/[₹,]/g, "")
-          ),
-        0
-      ),
-    []
+  const collections = useMemo(
+    () => collectionStatus === "ALL"
+      ? allCollections
+      : allCollections.filter((item) => item.status.toUpperCase() === collectionStatus),
+    [allCollections, collectionStatus],
   );
 
-  const openCollection = (
-    customer = ""
-  ) => {
-    setSelectedCustomer(customer);
-    setCollectionOpen(true);
-  };
+  const collectionTotalPages = Math.max(1, Math.ceil(collections.length / PAGE_SIZE));
+  const notificationTotalPages = Math.max(1, Math.ceil(notifications.length / PAGE_SIZE));
+  const safeCollectionPage = Math.min(collectionPage, collectionTotalPages);
+  const safeNotificationPage = Math.min(notificationPage, notificationTotalPages);
 
+  const visibleCollections = useMemo(
+    () => collections.slice((safeCollectionPage - 1) * PAGE_SIZE, safeCollectionPage * PAGE_SIZE),
+    [collections, safeCollectionPage],
+  );
+  const visibleNotifications = useMemo(
+    () => notifications.slice((safeNotificationPage - 1) * PAGE_SIZE, safeNotificationPage * PAGE_SIZE),
+    [notifications, safeNotificationPage],
+  );
 
-  const overviewStats: StatItem[] = [
+  const summaryCards: StatItem[] = [
     {
-      label: "This month",
-      value: "₹4,000",
-      helper: "4 listed payments",
-      icon: CreditCard,
+      label: "Today's collection",
+      value: formatMoney(summary?.today.collection_amount),
+      helper: summary?.today.date ? `As of ${formatDate(summary.today.date)}` : "Today's total",
+      icon: Wallet,
       tone: "primary",
     },
+
     {
-      label: "Still Due",
-      value: "₹2,000",
-      helper: "3 listed customers",
-      icon: CalendarDays,
+      label: "Approved collection",
+      value: formatMoney(summary?.collections.approved_amount),
+      helper: "Approved payments",
+      icon: CheckCircle2,
+      tone: "success",
+    },
+
+    {
+      label: "Pending approval",
+      value: formatMoney(summary?.collections.pending_amount),
+      helper: "Requires admin review",
+      icon: Clock3,
       tone: "warning",
     },
+
     {
-      label: "Total Customers",
-      value: 524,
-      helper: "Active customers",
-      icon: Users,
+      label: "Total accounts",
+      value: summary?.total_accounts ?? "—",
+      helper: "Customer accounts",
+      icon: CreditCard,
       tone: "neutral",
     },
-    {
-      label: "Pending Approval",
-      value: 12,
-      helper: "Admin action required",
-      icon: AlertCircle,
-      tone: "warning",
-    },
+
   ];
 
+  const errors = [
+    summaryQuery.error ? `Summary: ${getErrorMessage(summaryQuery.error)}` : "",
+    collectionsQuery.error ? `Collections: ${getErrorMessage(collectionsQuery.error)}` : "",
+    notificationsQuery.error ? `Notifications: ${getErrorMessage(notificationsQuery.error)}` : "",
+  ].filter(Boolean);
+
+  const isLoading = summaryQuery.isLoading || collectionsQuery.isLoading || notificationsQuery.isLoading;
+
   return (
-
-    <div
-      className=" bg-[var(--hs-white)]">
-
-      <div className=" px-[var(--hs-page-padding-x)] py-[var(--hs-page-padding-y)] ">
+    <div className="bg-[var(--hs-white)] text-[var(--hs-text)]">
+      <div className="px-[var(--hs-page-padding-x)] py-[var(--hs-page-padding-y)]">
 
         <PageHeader
           eyebrow="Your collection workspace"
           title="One clear view."
           highlight="Every payment."
-          subtitle="Track daily collections, monitor account activity, and keep every payment record organized."
+          subtitle="Track collections, review approvals, and monitor your customers and staff from live dashboard data."
           action={{
-            label: "Collect payment",
-            onClick: openCollection,
-            icon: <Plus className="size-4" />,
+            label: "Add customer",
+            onClick: onNavigateToAddCustomer,
           }}
         />
 
-        <StatsCards items={overviewStats} columns={4} />
+        {isLoading && !summary && allCollections.length === 0 && notifications.length === 0 ? (
+          <div className="mt-5 flex items-center justify-center gap-2 rounded-xl border border-[var(--hs-border)] p-10 text-sm text-[var(--hs-text-secondary)]">
+            <RefreshCw className="size-4 animate-spin" /> Loading dashboard data...
+          </div>
+        ) : (
+          <>
+            <StatsCards items={summaryCards} columns={4} />
 
-        <div className="grid grid-cols-1 gap-5 xl:grid-cols-2 mt-[var(--hs-section-gap)]">
-          <CollectionTableSection
-            title="Recent collections"
-            description="Latest customer payments"
-            count={`${paidCustomers.length.toString().padStart(2, "0")} payments`}
-            type="paid"
-            rows={paidCustomers.map((customer) => ({
-              id: customer.id,
-              name: customer.name,
-              amount: customer.amount,
-            }))}
-          />
+            <section className="mt-[var(--hs-section-gap)] grid grid-cols-1 gap-5 xl:grid-cols-2">
+              <div className="min-w-0 border border-[var(--hs-border)] bg-[var(--hs-white)] p-4 shadow-[0_4px_18px_rgba(15,23,42,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(15,23,42,0.08)] sm:p-5">
 
-          <CollectionTableSection
-            title="Due Collection"
-            description="Customers who have not paid today"
-            count={`${dueCustomers.length} due`}
-            type="due"
-            rows={dueCustomers.map((customer) => ({
-              id: customer.id,
-              name: customer.name,
-              amount: customer.amount,
-              staff: customer.staff,
-            }))}
-            onCollect={openCollection}
-          />
-        </div>
+                <SectionHeader
+                  title="Recent collections"
+                  description="Latest customer payment records"
+                  count={`${allCollections.length} records`}
+                />
 
-        {collectionOpen && (
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-[var(--hs-background)]/70 p-3">
+                  <label htmlFor="collection-status" className="text-xs font-medium text-[var(--hs-text-secondary)]">Filter by status</label>
+                  <Select
+                    value={collectionStatus}
+                    onValueChange={(value) => {
+                      setCollectionStatus(value);
+                      setCollectionPage(1);
+                    }}
+                  >
+                    <SelectTrigger
+                      id="collection-status"
+                      className=" h-10 w-full rounded-lg border border-[var(--hs-border)] bg-[var(--hs-white)] px-3 text-sm font-medium text-[var(--hs-text)] shadow-sm transition-colors hover:border-[var(--hs-primary-border)] focus:ring-2 focus:ring-[var(--hs-primary)]/15 focus:ring-offset-0 sm:w-[180px]">
+                      <SelectValue placeholder="All statuses" />
+                    </SelectTrigger>
 
-          <CollectionModal
-            open={collectionOpen}
-            onClose={() => setCollectionOpen(false)}
-            searchValue={selectedCustomer}
-            onSearchChange={(value) => {
-              setSelectedCustomer(value);
-              setSelectedAccount(null);
-            }}
-            account={selectedAccount}
-            amount={amount}
-            onAmountChange={setAmount}
-            onSubmit={handleAddCollection}
-            submitting={submitting}
-          />
+                    <SelectContent position="popper" align="end" className="min-w-[180px] rounded-xl border border-[var(--hs-border)] bg-[var(--hs-white)] p-1.5 shadow-lg">
+                      <SelectItem value="ALL" className="cursor-pointer rounded-md py-2 text-sm">
+                        All statuses
+                      </SelectItem>
+
+                      <SelectItem
+                        value="APPROVED"
+                        className="cursor-pointer rounded-md py-2 text-sm"
+                      >
+                        Approved
+                      </SelectItem>
+
+                      <SelectItem
+                        value="PENDING"
+                        className="cursor-pointer rounded-md py-2 text-sm"
+                      >
+                        Pending
+                      </SelectItem>
+
+                      <SelectItem
+                        value="REJECTED"
+                        className="cursor-pointer rounded-md py-2 text-sm"
+                      >
+                        Rejected
+                      </SelectItem>
+
+                      <SelectItem
+                        value="REVERSED"
+                        className="cursor-pointer rounded-md py-2 text-sm"
+                      >
+                        Reversed
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {collectionsQuery.isLoading ? (
+                  <p className="p-8 text-center text-sm text-[var(--hs-text-secondary)]">Loading collections...</p>
+                ) : collectionsQuery.error && allCollections.length === 0 ? (
+                  <p className="p-8 text-center text-sm text-red-700">{getErrorMessage(collectionsQuery.error)}</p>
+                ) : (
+                  <>
+                    <CollectionTable rows={visibleCollections} />
+                    <Pagination
+                      page={safeCollectionPage}
+                      totalItems={collections.length}
+                      onPageChange={setCollectionPage}
+                    />
+                  </>
+
+                )}
+              </div>
+
+              <div className="min-w-0 border border-[var(--hs-border)] bg-[var(--hs-white)] p-4 shadow-[0_4px_18px_rgba(15,23,42,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(15,23,42,0.08)] sm:p-5">
+                <SectionHeader
+                  title="Recent notifications"
+                  description="Recent collection and account activity"
+                  count={`${notifications.length} notifications`}
+                />
+
+                {notificationsQuery.isLoading ? (
+                  <p className="p-8 text-center text-sm text-[var(--hs-text-secondary)]">Loading notifications...</p>
+                ) : notificationsQuery.error && notifications.length === 0 ? (
+                  <p className="p-8 text-center text-sm text-red-700">{getErrorMessage(notificationsQuery.error)}</p>
+                ) : (
+
+                  <>
+                    <NotificationsTable rows={visibleNotifications} />
+                    <Pagination
+                      page={safeNotificationPage}
+                      totalItems={notifications.length}
+                      onPageChange={setNotificationPage}
+                    />
+                  </>
+                )}
+
+              </div>
+            </section>
+
+            <section className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={onNavigateToApprovals}
+                className="flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 p-4 text-left transition hover:bg-amber-100">
+
+                <span className="flex items-center gap-3">
+                  <span className="grid size-10 place-items-center rounded-lg bg-white text-amber-700"><AlertCircle className="size-5" /></span>
+                  <span>
+
+                    <span className="block text-sm font-semibold text-amber-950">Review pending approvals</span>
+                    <span className="mt-0.5 block text-xs text-amber-800">Pending amount: {formatMoney(summary?.collections.pending_amount)}</span>
+                  </span>
+
+                </span>
+                <span className="text-sm font-semibold text-amber-900">Open</span>
+              </button>
+
+
+
+              <div className="flex items-center gap-3 rounded-xl border border-[var(--hs-border)] bg-[var(--hs-background)]/50 p-4">
+                <span className="grid size-10 place-items-center rounded-lg bg-white text-[var(--hs-text-secondary)]"><CalendarDays className="size-5" /></span>
+                <span>
+
+                  <span className="block text-sm font-semibold text-[var(--hs-text)]">Dashboard date</span>
+                  <span className="mt-0.5 block text-xs text-[var(--hs-text-secondary)]">{formatDate(summary?.today.date)}</span>
+                </span>
+              </div>
+            </section>
+
+          </>
+
         )}
 
       </div>
 
     </div>
+
   );
+
 }
+
+export default OverviewSection;
