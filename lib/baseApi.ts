@@ -9,7 +9,7 @@ import {
 
 const baseUrl =
   process.env.NEXT_PUBLIC_API_URL ??
-  "http://localhost:5000/api";
+  "https://jama-saathi.onrender.com/api";
 
 export const SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
