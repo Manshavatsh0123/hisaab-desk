@@ -105,33 +105,29 @@ export default function AdminLogin({
 
   return (
     <main className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-[#edf7fc] px-3 py-4 sm:px-6 sm:py-6">
-      {/* Soft, layered background */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_8%_8%,rgba(255,255,255,0.98),transparent_42%),radial-gradient(ellipse_at_95%_90%,rgba(140,201,232,0.38),transparent_42%)]"
+
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_8%_8%,rgba(255,255,255,0.98),transparent_42%),radial-gradient(ellipse_at_95%_90%,rgba(140,201,232,0.38),transparent_42%)]"
       />
 
-      <div
-        aria-hidden="true"
+      <div aria-hidden="true"
         className="pointer-events-none absolute -left-24 top-1/4 size-64 rounded-full bg-white/60 blur-3xl"
       />
 
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute -right-24 bottom-1/4 size-72 rounded-full bg-[#c9252d]/[0.04] blur-3xl"
-      />
+        className="pointer-events-none absolute -right-24 bottom-1/4 size-72 rounded-full bg-[#c9252d]/[0.04] blur-3xl" />
 
-      {/* Main login card */}
+
       <section className="relative z-10 grid w-full max-w-[1160px] overflow-hidden rounded-[28px] border border-white/90 bg-white/95 p-2.5 shadow-[0_30px_90px_rgba(54,92,117,0.15)] sm:p-3 lg:grid-cols-[1fr_0.92fr] lg:gap-2 lg:p-3">
-        {/* Left illustration */}
+
         <div className="relative hidden min-h-0 overflow-hidden rounded-[21px] bg-[#edf5fa] lg:block">
           <Image
-            src="/Login1.png"
+            src="/Image_3.png"
             alt="HisaabSaathi collection and customer management"
             fill
             priority
             sizes="(max-width: 1023px) 100vw, 560px"
-            className="object-cover"
+            className="object-left"
           />
 
           <div
@@ -166,7 +162,7 @@ export default function AdminLogin({
               <div className="relative h-[66px] w-full max-w-[230px]">
                 <Image
                   src="/Logo1.png"
-                  alt="HisaabSaathi"
+                  alt="Saathi"
                   fill
                   priority
                   sizes="230px"
@@ -301,7 +297,7 @@ export default function AdminLogin({
 
             <div className="mt-5 border-t border-[#edf0f3] pt-4 text-center">
               <p className="text-xs text-[#9aa3af]">
-                HisaabSaathi · Admin workspace
+                BharosaSaathi · Admin workspace
               </p>
               <p className="mt-1.5 text-[10px] text-[#b0b8c2]">
                 Digital Collection &amp; Record Book

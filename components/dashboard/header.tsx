@@ -125,7 +125,7 @@ export function Header({
             className={`flex min-h-[64px] items-center justify-between gap-2 px-3 transition-all duration-300 sm:gap-3 sm:px-5 lg:px-6 ${isScrolled ? "sm:min-h-[66px]" : "sm:min-h-[74px]"
               }`}
           >
-            {/* Logo */}
+            
             <button
               type="button"
               onClick={() => navigateTo("overview")}
@@ -134,9 +134,9 @@ export function Header({
             >
               <span className="flex h-20 w-80 shrink-0 items-center justify-start">
                 <Image
-                  src="/Logo1.png"
-                  alt="HisaabSaathi Logo"
-                  width={256}
+                  src="/BharosaSaathi_Logo.png"
+                  alt="BharosaSaathi Logo"
+                  width={206}
                   height={288}
                   priority
                   className="h-32 w-40 object-contain object-left md:h-72 md:w-64"
