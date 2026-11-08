@@ -610,8 +610,25 @@ export function DealsSection() {
           resultLabel="accounts"
         />
 
+         <DailyCollectionTable
+          accounts={filteredAccounts}
+          selectedMonth={selectedMonth}
+          today={today}
+          statusConfig={statusConfig}
+          loading={accountsLoading || accountsFetching}
+          error={accountsError}
+          onRetry={() => {
+            void refetch();
+          }}
+          onAddCollection={openCollection}
+          formatMoney={formatMoney}
+          formatDate={formatDate}
+          monthLabel={monthLabel}
+          pageSize={20}
+        />
 
-        <DailyCollectionTable
+
+        {/* <DailyCollectionTable
           accounts={filteredAccounts}
           selectedMonth={selectedMonth}
           today={today}
@@ -623,7 +640,7 @@ export function DealsSection() {
           formatDate={formatDate}
           monthLabel={monthLabel}
           pageSize={20}
-        />
+        /> */}
 
         <CollectionModal
           open={collectionOpen}

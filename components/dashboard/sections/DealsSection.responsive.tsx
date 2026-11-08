@@ -524,7 +524,7 @@ export function DealsSection() {
   return (
 
     <main className="min-w-0 w-full text-[var(--hs-text)]">
-      <div className="mx-auto flex w-full min-w-0 max-w-[1600px] flex-col gap-6 px-4 py-5 sm:gap-7 sm:px-6 sm:py-6 xl:px-8"> 
+      <div className="mx-auto flex w-full min-w-0 max-w-[1600px] flex-col gap-6 px-4 py-5 sm:gap-7 sm:px-6 sm:py-6 xl:px-8">
         <PageHeader
           eyebrow={`Customers / ${monthLabel(selectedMonth)}`}
           title="Customer collection"
@@ -542,50 +542,51 @@ export function DealsSection() {
         </section>
 
         <section className="min-w-0">
-        <AccountFilters
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          statusFilter={statusFilter}
-          setStatusFilter={setStatusFilter}
-          statusOptions={statusOptions}
-          statusLabels={Object.fromEntries(
-            statusOptions
-              .filter((value) => value !== "all")
-              .map((value) => [
-                value,
-                statusConfig[value as CollectionStatus].label,
-              ]),
-          )}
-          allStatusValue="all"
-          frequencyFilter={frequencyFilter}
-          setFrequencyFilter={setFrequencyFilter}
-          frequencyOptions={frequencyOptions}
-          allFrequencyValue="all"
-          selectedMonth={selectedMonth}
-          setSelectedMonth={setSelectedMonth}
-          onExport={exportCsv}
-          resultCount={filteredAccounts.length}
-          resultLabel="accounts"
-        />
+          <AccountFilters
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            statusFilter={statusFilter}
+            setStatusFilter={setStatusFilter}
+            statusOptions={statusOptions}
+            statusLabels={Object.fromEntries(
+              statusOptions
+                .filter((value) => value !== "all")
+                .map((value) => [
+                  value,
+                  statusConfig[value as CollectionStatus].label,
+                ]),
+            )}
+            allStatusValue="all"
+            frequencyFilter={frequencyFilter}
+            setFrequencyFilter={setFrequencyFilter}
+            frequencyOptions={frequencyOptions}
+            allFrequencyValue="all"
+            selectedMonth={selectedMonth}
+            setSelectedMonth={setSelectedMonth}
+            onExport={exportCsv}
+            resultCount={filteredAccounts.length}
+            resultLabel="accounts"
+          />
         </section>
 
         <section className="min-w-0 overflow-hidden rounded-[8px] border border-[var(--hs-border)] bg-white shadow-sm shadow-slate-900/[0.02]">
           <div className="w-full min-w-0 overflow-x-auto">
-          <DailyCollectionTable
-            accounts={filteredAccounts}
-            selectedMonth={selectedMonth}
-            today={today}
-            statusConfig={statusConfig}
-            loading={accountsLoading || accountsFetching}
-            error={accountsError}
-            onRetry={() => {
-              void refetch();
-            }}
-            onAddPayment={openCollection}
-            formatMoney={formatMoney}
-            formatDate={formatDate}
-            monthLabel={monthLabel}
-          />
+            <DailyCollectionTable
+              accounts={filteredAccounts}
+              selectedMonth={selectedMonth}
+              today={today}
+              statusConfig={statusConfig}
+              loading={accountsLoading || accountsFetching}
+              error={accountsError}
+              onRetry={() => {
+                void refetch();
+              }}
+              onAddCollection={openCollection}
+              formatMoney={formatMoney}
+              formatDate={formatDate}
+              monthLabel={monthLabel}
+            />
+
           </div>
         </section>
 

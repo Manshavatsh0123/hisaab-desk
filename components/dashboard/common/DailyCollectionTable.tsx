@@ -5,11 +5,12 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
+  LucideIcon,
   Plus,
   RefreshCw,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import type { CollectionAccount } from "@/mocks/dailyCollectionResponse";
+import type { CollectionAccount, CollectionStatus } from "@/mocks/dailyCollectionResponse";
 
 export type CollectionTableAccount = Pick<
   CollectionAccount,
@@ -29,6 +30,16 @@ type DailyCollectionTableProps = {
   accounts: CollectionTableAccount[];
   selectedMonth: string;
   today: string;
+
+  statusConfig: Record<
+    CollectionStatus,
+    {
+      label: string;
+      icon: LucideIcon;
+      className: string;
+    }
+  >;
+
   loading?: boolean;
   error?: string | null;
   onRetry?: () => void;

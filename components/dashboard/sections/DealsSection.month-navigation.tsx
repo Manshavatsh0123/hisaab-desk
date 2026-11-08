@@ -645,9 +645,12 @@ export function DealsSection() {
           accounts={filteredAccounts}
           selectedMonth={selectedMonth}
           today={today}
+          statusConfig={statusConfig}
           loading={accountsLoading || accountsFetching}
           error={accountsError}
-          onRetry={() => void refetch()}
+          onRetry={() => {
+            void refetch();
+          }}
           onAddCollection={openCollection}
           formatMoney={formatMoney}
           formatDate={formatDate}

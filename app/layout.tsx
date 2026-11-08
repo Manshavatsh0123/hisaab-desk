@@ -19,14 +19,22 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "HisaabSaathi",
-  description: "HisaabSaathi - Digital Collection & Record Book",
-  generator: "HisaabSaathi",
+  title: {
+    default: "BharosaSaathi",
+    template: "%s | BharosaSaathi",
+  },
+
+  description:
+    "BharosaSaathi - Digital Collection & Record Book. Manage customers, collections, payments, and account records securely in one place.",
+
+  applicationName: "BharosaSaathi",
+
+  generator: "Next.js",
 
   icons: {
-    icon: "/Logo1.png",
-    shortcut: "/Logo1.png",
-    apple: "/Logo1.png",
+    icon: "/BharosaSaathi_Logo.png",
+    shortcut: "/BharosaSaathi_Logo.png",
+    apple: "/BharosaSaathi_Logo.png",
   },
 };
 
